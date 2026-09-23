@@ -57,6 +57,7 @@ const profile = {
       status: "active",
     },
   ],
+  group_ids: [],
 };
 const stamp = Date.now();
 const items = ["free", "plus"].map((plan, i) => ({
@@ -98,6 +99,7 @@ for (const a of accounts) {
   assert.equal(a.extra.openai_oauth_responses_websockets_v2_enabled, false);
   assert.equal(a.extra.openai_long_context_billing_enabled, false);
   assert.equal(a.extra.auto_reset_credit_enabled, false);
+  assert.deepEqual(a.group_ids, []);
   assert.equal(a.credentials.model_mapping["qa-model"], "qa-target");
   assert.ok(a.credentials.refresh_token.startsWith("FAKE-REFRESH"));
   assert.ok(exported.proxies.some((p) => p.proxy_key === a.proxy_key));
@@ -112,5 +114,5 @@ assert.notEqual(
   accounts[1].extra.codex_fingerprint_seed,
 );
 console.log(
-  "Sub2API import/export verified: 2 accounts, proxy association, independent tiers/tokens/seeds, scheduling, mapping, and explicit false/zero values.",
+  "Sub2API import/export verified: 2 accounts, explicit empty groups, proxy association, independent tiers/tokens/seeds, scheduling, mapping, and explicit false/zero values.",
 );
