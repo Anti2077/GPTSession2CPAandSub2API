@@ -33,6 +33,7 @@ const reference = {
   },
   concurrency: 3,
   rate_multiplier: 0,
+  group_ids: [2, 5],
   expires_at: 9999999999,
   proxy_key: S.proxyKey(proxy),
   notes: "PRIVATE NOTE",
@@ -57,6 +58,8 @@ test("template copies supported settings, never account identity or runtime stat
   assert.equal(profile.settings.concurrency, 3);
   assert.equal(profile.settings.rate_multiplier, 0);
   assert.equal(profile.expiry, undefined);
+  assert.deepEqual(profile.group_ids, [2, 5]);
+  assert.ok(included.includes("参与分组"));
   assert.ok(included.includes("extra.codex_fingerprint_mode"));
   assert.ok(excluded.includes("credentials.access_token"));
   const result = S.buildDocument([item(account)], profile);
@@ -69,6 +72,7 @@ test("template copies supported settings, never account identity or runtime stat
   assert.equal(a.extra.codex_7d_used_percent, undefined);
   assert.equal(a.extra.auto_reset_credit_enabled, false);
   assert.equal(a.rate_multiplier, 0);
+  assert.deepEqual(a.group_ids, [2, 5]);
   assert.equal(a.extra.openai_oauth_responses_websockets_v2_enabled, false);
   assert.equal(result.proxies.length, 1);
   assert.equal(a.proxy_key, result.proxies[0].proxy_key);
@@ -86,6 +90,7 @@ test("multiple account tiers and tokens remain independent; override takes prece
       name: "renamed",
       profile: {
         settings: { concurrency: 7, "extra.codex_fingerprint_mode": "off" },
+        group_ids: [9],
         proxies: [],
         proxy: null,
       },
@@ -95,8 +100,22 @@ test("multiple account tiers and tokens remain independent; override takes prece
   assert.equal(result.accounts[1].name, "renamed");
   assert.equal(result.accounts[1].credentials.plan_type, "plus");
   assert.equal(result.accounts[1].proxy_key, undefined);
+  assert.deepEqual(result.accounts[1].group_ids, [9]);
   assert.equal(result.accounts[0].concurrency, 3);
   assert.equal(account.concurrency, 10);
+});
+test("empty group IDs are explicit and invalid IDs are rejected", () => {
+  const p = S.extractTemplate(doc).profile;
+  const empty = S.buildDocument([item(account)], { ...p, group_ids: [] });
+  assert.deepEqual(empty.accounts[0].group_ids, []);
+  assert.throws(() => S.validateProfile({ ...p, group_ids: [1, 1] }), /重复/);
+  assert.throws(() => S.validateProfile({ ...p, group_ids: [0] }), /正整数/);
+  assert.throws(() => S.validateProfile({ ...p, group_ids: [-1] }), /正整数/);
+  assert.throws(() => S.validateProfile({ ...p, group_ids: [1.5] }), /正整数/);
+  const parsed = S.parseTemplate(
+    S.serializeTemplate("groups", { ...p, group_ids: [3] }),
+  );
+  assert.deepEqual(parsed.profile.group_ids, [3]);
 });
 test("password excluded by default, including proxy_key; requires refill", () => {
   const profile = S.extractTemplate(doc).profile;

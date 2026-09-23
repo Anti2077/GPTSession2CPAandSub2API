@@ -41,6 +41,7 @@ const sample = {
         auto_reset_credit_enabled: false,
         openai_long_context_billing_enabled: false,
       },
+      group_ids: [2, 5],
     },
   ],
 };
@@ -89,6 +90,7 @@ test("template extraction, overrides, save/reload, download, and no account requ
   expect(d.accounts[0].credentials.chatgpt_user_id).toBe("new-user");
   expect(d.accounts[1].credentials.plan_type).toBe("plus");
   expect(d.accounts[0].extra.codex_fingerprint_seed).toBeUndefined();
+  expect(d.accounts[0].group_ids).toEqual([2, 5]);
   expect(d.proxies).toHaveLength(1);
   await page.getByLabel("编辑范围", { exact: true }).selectOption("1");
   await page.locator("#setting-concurrency-apply").check();
@@ -136,6 +138,25 @@ test("template extraction, overrides, save/reload, download, and no account requ
       (r) => r.method === "GET" && r.url.startsWith("http://127.0.0.1:4173/"),
     ),
   ).toBe(true);
+});
+test("group IDs can be set, explicitly cleared, and reject invalid input", async ({
+  page,
+}) => {
+  await page.locator("#session-input").fill(JSON.stringify(makeAccount()));
+  await page.locator("#setting-group-ids-apply").check();
+  await page.locator("#setting-group-ids").fill("1, 3, 5");
+  expect((await output(page)).accounts[0].group_ids).toEqual([1, 3, 5]);
+  await page.locator("#setting-group-ids").fill("");
+  expect((await output(page)).accounts[0].group_ids).toEqual([]);
+  await page.locator("#setting-group-ids").fill("1, 1");
+  await expect(page.locator("#download-output")).toBeDisabled();
+  await expect(page.locator("#setting-group-ids")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await page.locator("#setting-group-ids-apply").uncheck();
+  expect((await output(page)).accounts[0].group_ids).toBeUndefined();
+  await expect(page.locator("#download-output")).toBeEnabled();
 });
 test("false/zero/unset, invalid config recovery, other formats, and no stale per-account overrides", async ({
   page,

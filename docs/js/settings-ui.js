@@ -377,6 +377,63 @@
       control.addEventListener("input", changed);
       (section === "common" ? common : advancedGrid).append(wrap);
     }
+    const groupApply = input("checkbox");
+    groupApply.checked = Object.hasOwn(p, "group_ids");
+    groupApply.id = "setting-group-ids-apply";
+    const groupInput = input("text");
+    groupInput.id = "setting-group-ids";
+    groupInput.placeholder = "例如：1, 2, 5";
+    groupInput.value = groupApply.checked ? p.group_ids.join(", ") : "";
+    groupInput.disabled = !groupApply.checked;
+    const groupWrap = el("div", undefined, { class: "config-field" });
+    const groupError = el("span", "", {
+      class: "field-error",
+      id: "setting-group-ids-error",
+    });
+    groupInput.setAttribute("aria-describedby", groupError.id);
+    groupWrap.append(
+      label("应用：参与分组 ID", groupApply),
+      label("参与分组 ID（逗号分隔）", groupInput),
+      el(
+        "small",
+        "填写目标 Sub2API 实例中的分组 ID；勾选后留空表示明确不加入任何分组。",
+      ),
+      groupError,
+    );
+    common.append(groupWrap);
+    readers.push(() => {
+      groupError.textContent = "";
+      groupInput.removeAttribute("aria-invalid");
+      if (!groupApply.checked) {
+        delete p.group_ids;
+        return;
+      }
+      try {
+        const raw = groupInput.value.trim();
+        const ids = raw
+          ? raw.split(",").map((part) => {
+              const value = part.trim();
+              if (!/^\d+$/.test(value))
+                throw Error("参与分组只能填写正整数 ID");
+              const id = Number(value);
+              if (!Number.isSafeInteger(id) || id <= 0)
+                throw Error("参与分组只能填写正整数 ID");
+              return id;
+            })
+          : [];
+        S.validateProfile({ settings: {}, proxies: [], group_ids: ids });
+        p.group_ids = ids;
+      } catch (e) {
+        groupError.textContent = e.message;
+        groupInput.setAttribute("aria-invalid", "true");
+        throw e;
+      }
+    });
+    groupApply.addEventListener("change", () => {
+      groupInput.disabled = !groupApply.checked;
+      changed();
+    });
+    groupInput.addEventListener("input", changed);
     const expiry = select([
       ["inherit", "沿用新账号 / 继承整批"],
       ["none", "无限期"],

@@ -218,6 +218,16 @@
       (!Number.isSafeInteger(p.expiry) || p.expiry <= 0)
     )
       throw Error("账号到期时间无效");
+    if (own(p, "group_ids")) {
+      if (!Array.isArray(p.group_ids)) throw Error("参与分组必须是数组");
+      const seen = new Set();
+      for (const id of p.group_ids) {
+        if (!Number.isSafeInteger(id) || id <= 0)
+          throw Error("参与分组只能填写正整数 ID");
+        if (seen.has(id)) throw Error(`参与分组 ID 重复：${id}`);
+        seen.add(id);
+      }
+    }
     orderProxies(p.proxies, false);
     return p;
   }
@@ -299,6 +309,10 @@
       profile.proxy = selected.name;
       included.push("代理及备用代理");
     }
+    if (own(a, "group_ids")) {
+      profile.group_ids = clone(a.group_ids || []);
+      included.push("参与分组");
+    }
     function walk(o, prefix = "") {
       for (const [k, v] of Object.entries(o || {})) {
         const path = prefix ? `${prefix}.${k}` : k;
@@ -319,6 +333,7 @@
       if (value !== undefined) set(a, path, value);
     }
     if (own(record, "expires_at")) a.expires_at = record.expires_at;
+    if (own(record, "group_ids")) a.group_ids = clone(record.group_ids || []);
     // No proxy_key: proxies must be explicitly supplied through the template/proxy editor.
     return a;
   }
@@ -331,6 +346,7 @@
       if (profile.expiry === null) delete a.expires_at;
       else a.expires_at = profile.expiry;
     }
+    if (own(profile, "group_ids")) a.group_ids = clone(profile.group_ids);
     if (own(profile, "proxy")) {
       delete a.proxy_key;
       if (profile.proxy !== null)
@@ -355,6 +371,7 @@
       out.proxies = clone(override.proxies);
     }
     if (own(override, "expiry")) out.expiry = override.expiry;
+    if (own(override, "group_ids")) out.group_ids = clone(override.group_ids);
     return out;
   }
   function buildDocument(
@@ -432,7 +449,8 @@
       settings: clone(profile.settings),
       proxies: profile.proxies.map(cleanProxy),
     };
-    for (const k of ["proxy", "expiry"]) if (own(profile, k)) p[k] = profile[k];
+    for (const k of ["proxy", "expiry", "group_ids"])
+      if (own(profile, k)) p[k] = clone(profile[k]);
     for (const proxy of p.proxies) {
       if (!includePasswords && proxy.password) {
         delete proxy.password;
