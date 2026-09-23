@@ -1,0 +1,51 @@
+# Isolated, disposable validation only. All credentials below are fake test credentials.
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: converter
+      POSTGRES_PASSWORD: converter-test-only
+      POSTGRES_DB: converter
+    tmpfs: [/var/lib/postgresql]
+    networks: [isolated]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U converter"]
+      interval: 2s
+      retries: 30
+  redis:
+    image: redis:8-alpine
+    networks: [isolated]
+  preview:
+    image: nginx:alpine
+    ports: ["127.0.0.1:18097:80"]
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [isolated, preview]
+    depends_on: [app]
+  app:
+    image: ${SUB2API_TEST_IMAGE:-sub2api-sync-20260920:local}
+    tmpfs: [/app/data]
+    networks: [isolated]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AUTO_SETUP: "true"
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: converter
+      DATABASE_PASSWORD: converter-test-only
+      DATABASE_DBNAME: converter
+      DATABASE_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      ADMIN_EMAIL: converter@example.test
+      ADMIN_PASSWORD: Converter-Test-Only-2026!
+      JWT_SECRET: converter-test-only-jwt-secret-0123456789abcdef
+      TOTP_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+networks:
+  preview: {}
+  isolated:
+    internal: true

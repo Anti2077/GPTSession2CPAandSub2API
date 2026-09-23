@@ -1,0 +1,16 @@
+{
+  "name": "sub2api-session-converter",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node tests/convert-session.test.js && node --test tests/sub2api.test.js",
+    "test:browser": "playwright test",
+    "serve": "node scripts/serve.js",
+    "format": "prettier --write docs scripts tests package.json playwright.config.js .github/workflows/test.yml",
+    "format:check": "prettier --check docs scripts tests package.json playwright.config.js .github/workflows/test.yml"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "prettier": "3.9.8"
+  }
+}

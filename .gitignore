@@ -16,3 +16,8 @@ node_modules/
 dist/
 build/
 coverage/
+
+# Browser tests and temporary validation reports
+/test-results/
+/playwright-report/
+/artifacts/
